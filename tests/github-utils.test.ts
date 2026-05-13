@@ -41,6 +41,14 @@ describe("parseBountyLabel", () => {
     });
   });
 
+  it("accepts the sandbox bounty label prefix by default", () => {
+    assert.deepEqual(parseBountyLabel("pviumSandbox:10USDC"), {
+      amount: 10,
+      currency: "USDC",
+      raw: "pviumSandbox:10USDC",
+    });
+  });
+
   it("parses decimal amounts and normalizes currency", () => {
     assert.deepEqual(parseBountyLabel("pvium:12.5usdt"), {
       amount: 12.5,
@@ -63,6 +71,31 @@ describe("parseBountyLabel", () => {
         amount: 15,
         currency: "USDC",
         raw: "reward:15USDC",
+      });
+      assert.equal(parseBountyLabel("pvium:15USDC"), null);
+    } finally {
+      if (previousPrefix === undefined) {
+        delete process.env.PVIUM_BOUNTY_LABEL_PREFIX;
+      } else {
+        process.env.PVIUM_BOUNTY_LABEL_PREFIX = previousPrefix;
+      }
+    }
+  });
+
+  it("uses comma-separated custom bounty label prefixes from the environment", () => {
+    const previousPrefix = process.env.PVIUM_BOUNTY_LABEL_PREFIX;
+    process.env.PVIUM_BOUNTY_LABEL_PREFIX = "reward:,sandboxReward";
+
+    try {
+      assert.deepEqual(parseBountyLabel("reward:15USDC"), {
+        amount: 15,
+        currency: "USDC",
+        raw: "reward:15USDC",
+      });
+      assert.deepEqual(parseBountyLabel("sandboxReward:12USDC"), {
+        amount: 12,
+        currency: "USDC",
+        raw: "sandboxReward:12USDC",
       });
       assert.equal(parseBountyLabel("pvium:15USDC"), null);
     } finally {
