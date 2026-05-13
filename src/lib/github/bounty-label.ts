@@ -4,7 +4,7 @@ export interface ParsedBountyLabel {
   raw: string;
 }
 
-const DEFAULT_BOUNTY_LABEL_PREFIX = "pvium:";
+const DEFAULT_BOUNTY_LABEL_PREFIXES = ["pvium:", "pviumSandbox:"];
 
 export function parseBountyLabel(labelName: string): ParsedBountyLabel | null {
   const match = labelName.trim().match(getBountyLabelPattern());
@@ -22,17 +22,30 @@ export function extractBountyLabels(labels: Array<{ name?: string }>) {
     .map((label) => (label.name ? parseBountyLabel(label.name) : null))
     .filter((label): label is ParsedBountyLabel => Boolean(label));
 }
+
 function getBountyLabelPattern() {
-  const prefix = normalizeBountyLabelPrefix(
-    process.env.PVIUM_BOUNTY_LABEL_PREFIX,
-  );
+  const prefixes = getBountyLabelPrefixes(process.env.PVIUM_BOUNTY_LABEL_PREFIX);
+  const prefixPattern = prefixes.map(escapeRegExp).join("|");
 
   return new RegExp(
-    `^${escapeRegExp(prefix)}(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z0-9]+)?$`,
+    `^(?:${prefixPattern})(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z0-9]+)?$`,
   );
 }
+
+function getBountyLabelPrefixes(value: string | undefined) {
+  const configuredPrefixes = value
+    ?.split(",")
+    .map((prefix) => prefix.trim())
+    .filter(Boolean);
+  const prefixes = configuredPrefixes?.length
+    ? configuredPrefixes
+    : DEFAULT_BOUNTY_LABEL_PREFIXES;
+
+  return prefixes.map(normalizeBountyLabelPrefix);
+}
+
 function normalizeBountyLabelPrefix(value: string | undefined) {
-  const prefix = value?.trim() || DEFAULT_BOUNTY_LABEL_PREFIX;
+  const prefix = value?.trim() || DEFAULT_BOUNTY_LABEL_PREFIXES[0];
   return prefix.endsWith(":") ? prefix : `${prefix}:`;
 }
 
